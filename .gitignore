@@ -1,5 +1,6 @@
 CMakeLists.txt.user
 CMakeCache.txt
+Makefile
 CMakeFiles
 CMakeScripts
 Testing
@@ -12,3 +13,8 @@ _deps
 *.o
 *.dylib
 a.out
+softsdfinit
+*.key
+*.pem
+build*
+
