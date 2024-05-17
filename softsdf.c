@@ -17,7 +17,6 @@
 #include <gmssl/sm4_cbc_mac.h>
 #include <gmssl/rand.h>
 #include <gmssl/error.h>
-#include "sgd.h"
 #include "sdf.h"
 
 #define SDR_GMSSLERR	(SDR_BASE + 0x00000100)

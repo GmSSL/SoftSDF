@@ -4,16 +4,16 @@ CFLAGS=-fPIC -Wall
 LDFLAGS=-shared
 LIBS=-lgmssl -framework Security
 
-TARGET=libsoft_sdf.so
-OBJS=soft_sdf.o
+TARGET=libsoftsdf.so
+OBJS=softsdf.o
 
 all: $(TARGET)
 
-$(OBJS): soft_sdf.c
-	$(CC) $(CFLAGS) -c soft_sdf.c -o $@
+$(OBJS): softsdf.c
+	$(CC) $(CFLAGS) -c softsdf.c -o $@
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS) -Wl,-exported_symbols_list,soft_sdf.exp
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS) -Wl,-exported_symbols_list,softsdf.exp
 
 clean:
 	rm -f $(OBJS) $(TARGET)
