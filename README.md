@@ -14,11 +14,11 @@ SDF密码设备接口的软件实现
 
 ## 项目简介
 
-SoftSDF 是一个实现了 SDF（Security Digital Facility）接口的软件项目。该项目编译后生成一个 SDF 动态库和一个名为 `softsdfinit` 的命令行工具。SoftSDF 提供标准的 SDF 接口，通过调用 GmSSL 库以软件方式实现密码计算和密钥存储。
+SoftSDF 是一个实现了 SDF 接口的软件项目。该项目编译后生成一个 SDF 动态库和一个名为 `softsdfinit` 的命令行工具。SoftSDF 提供标准的 SDF 接口，通过调用 GmSSL 库以软件方式实现密码计算和密钥存储。
 
 ## SDF 基本概念
 
-SDF（Security Digital Facility）是中国国家密码管理局发布的安全密码设备接口标准。该标准定义了密码设备与外部应用系统之间的接口，包括以下几个方面：
+SDF 是中国国家密码管理局发布的安全密码设备接口标准。该标准定义了密码设备与外部应用系统之间的接口，包括以下几个方面：
 - **基础安全算法**：SM1、SM2、SM3、SM4 等中国国家密码算法。
 - **密钥管理**：密钥的生成、存储、使用和销毁的管理规范。
 - **数据加密解密**：数据加密和解密的接口和操作。
@@ -96,7 +96,20 @@ $ softsdfinit -kek 1 -key 1 -pass P@ssw0rd
 
 ### 编译
 
-确保已安装 GmSSL 库。编译 SoftSDF 项目，生成 SDF 动态库和 `softsdfinit` 命令行工具：
+首先以静态库的方式编译、安装GmSSL。从 https://github.com/guanzhi/GmSSL 下载GmSSL的源代码。在源代码目录执行如下操作：
+
+```sh
+mkdir build
+cd build
+cmake .. -DBUILD_SHARED_LIBS=OFF
+make
+make test
+sudo make install
+```
+
+由于SoftSDF依赖GmSSL的静态库，因此应检查静态库`/usr/local/lib/libgmssl.a`是否存在。默认情况下编译GmSSL只生成动态库，通过指定`-DBUILD_SHARED_LIBS=OFF`可以生成静态库。
+
+编译 SoftSDF 项目，生成 SDF 动态库和 `softsdfinit` 命令行工具：
 
 ```sh
 mkdir build

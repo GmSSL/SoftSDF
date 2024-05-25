@@ -19,10 +19,13 @@ if(APPLE)
 endif()
 
 if(APPLE)
-    set_target_properties(softsdf PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${CMAKE_SOURCE_DIR}/softsdf.exp")
+    set_target_properties(softsdf PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${CMAKE_SOURCE_DIR}/softsdf.exp -Wl,-x")
 else()
     set_target_properties(softsdf PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_SOURCE_DIR}/softsdf.exp")
 endif()
 
 add_executable(softsdfinit ${SOFTSDFINIT_SRC})
 target_link_libraries(softsdfinit gmssl)
+
+add_executable(softsdftest softsdftest.c)
+target_link_libraries(softsdftest softsdf gmssl)
