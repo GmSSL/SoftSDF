@@ -62,130 +62,6 @@ SOFTSDF_DEVICE *deviceHandle = NULL;
 
 #define FILENAME_MAX_LEN 256
 
-
-static int generate_kek(unsigned int uiKEKIndex)
-{
-	char filename[256];
-	uint8_t kek[16];
-	FILE *file;
-
-	if (rand_bytes(kek, sizeof(kek)) != 1) {
-		error_print();
-		return -1;
-	}
-
-	snprintf(filename, sizeof(filename), "kek-%u.key", uiKEKIndex);
-	if (!(file = fopen(filename, "wb"))) {
-		error_print();
-		return -1;
-	}
-	if (fwrite(kek, 1, sizeof(kek), file) != sizeof(kek)) {
-		fclose(file);
-		error_print();
-		return -1;
-	}
-	fclose(file);
-
-	return 1;
-}
-
-static int generate_sign_key(unsigned int uiKeyIndex, const char *pass)
-{
-	SM2_KEY sm2_key;
-	char filename[256];
-	FILE *file;
-
-	if (sm2_key_generate(&sm2_key) != 1) {
-		error_print();
-		return -1;
-	}
-
-	snprintf(filename, sizeof(filename), "sm2sign-%u.pem", uiKeyIndex);
-	if ((file = fopen(filename, "wb")) == NULL) {
-		fclose(file);
-		error_print();
-		return -1;
-	}
-	if (sm2_private_key_info_encrypt_to_pem(&sm2_key, pass, file) != 1) {
-		error_print();
-		return -1;
-	}
-	fclose(file);
-
-	snprintf(filename, sizeof(filename), "sm2signpub-%u.pem", uiKeyIndex);
-	if ((file = fopen(filename, "wb")) == NULL) {
-		fclose(file);
-		error_print();
-		return -1;
-	}
-	if (sm2_public_key_info_to_pem(&sm2_key, file) != 1) {
-		error_print();
-		return -1;
-	}
-	fclose(file);
-
-	return 1;
-}
-
-static int generate_enc_key(unsigned int uiKeyIndex, const char *pass)
-{
-	SM2_KEY sm2_key;
-	char filename[256];
-	FILE *file;
-
-	if (sm2_key_generate(&sm2_key) != 1) {
-		error_print();
-		return -1;
-	}
-
-	snprintf(filename, sizeof(filename), "sm2enc-%u.pem", uiKeyIndex);
-	if ((file = fopen(filename, "wb")) == NULL) {
-		fclose(file);
-		error_print();
-		return -1;
-	}
-	if (sm2_private_key_info_encrypt_to_pem(&sm2_key, pass, file) != 1) {
-		error_print();
-		return -1;
-	}
-	fclose(file);
-
-	snprintf(filename, sizeof(filename), "sm2encpub-%u.pem", uiKeyIndex);
-	if ((file = fopen(filename, "wb")) == NULL) {
-		fclose(file);
-		error_print();
-		return -1;
-	}
-	if (sm2_public_key_info_to_pem(&sm2_key, file) != 1) {
-		error_print();
-		return -1;
-	}
-	fclose(file);
-
-	return 1;
-}
-
-int softSDF_CreateDevice(unsigned char *pucPassword, unsigned int uiPwdLength)
-{
-	if (strlen((char *)pucPassword) != uiPwdLength) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	// generate system keypairs
-	generate_sign_key(0, (char *)pucPassword);
-	generate_enc_key(0, (char *)pucPassword);
-
-	// generate user keypairs
-	generate_sign_key(1, (char *)pucPassword);
-	generate_enc_key(1, (char *)pucPassword);
-
-	// generate user KEK
-	generate_kek(1);
-
-	return SDR_OK;
-}
-
 int SDF_OpenDevice(
 	void **phDeviceHandle)
 {
@@ -333,9 +209,9 @@ int SDF_CloseSession(
 	return SDR_OK;
 }
 
-#define SOFTSDF_DEV_DATE	"20231227"
+#define SOFTSDF_DEV_DATE	"20240528"
 #define SOFTSDF_DEV_BATCH_NUM	"001"
-#define SOFTSDF_DEV_SERIAL_NUM	"00123"
+#define SOFTSDF_DEV_SERIAL_NUM	"0001"
 #define SOFTSDF_DEV_SERIAL	SOFTSDF_DEV_DATE \
 				SOFTSDF_DEV_BATCH_NUM \
 				SOFTSDF_DEV_SERIAL_NUM
