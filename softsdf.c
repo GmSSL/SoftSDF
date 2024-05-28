@@ -1092,8 +1092,7 @@ int SDF_ImportKeyWithISK_ECC(
 		container = container->next;
 	}
 	if (container == NULL) {
-		// 没有找到container意味着可能之前没有调用GetPrivateKeyAccess				
-		error_print();
+		error_puts("ISK not loaded, call GetPrivateKeyAccess before use ISK\n");
 		return SDR_INARGERR;
 	}
 

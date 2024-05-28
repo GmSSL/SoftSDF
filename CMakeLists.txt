@@ -21,7 +21,7 @@ endif()
 if(APPLE)
     set_target_properties(softsdf PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${CMAKE_SOURCE_DIR}/softsdf.exp -Wl,-x")
 else()
-    set_target_properties(softsdf PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_SOURCE_DIR}/softsdf.exp")
+    set_target_properties(softsdf PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_SOURCE_DIR}/softsdf.lds -Wl,-x")
 endif()
 
 add_executable(softsdfinit ${SOFTSDFINIT_SRC})

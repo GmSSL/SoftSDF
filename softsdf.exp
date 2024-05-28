@@ -1,4 +1,3 @@
-_softSDF_CreateDevice
 _SDF_OpenDevice
 _SDF_CloseDevice
 _SDF_OpenSession
