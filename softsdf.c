@@ -19,6 +19,7 @@
 #include <gmssl/error.h>
 #include "sdf.h"
 
+
 #define SDR_GMSSLERR	(SDR_BASE + 0x00000100)
 
 static const uint8_t zeros[ECCref_MAX_LEN - 32] = {0};
@@ -210,8 +211,8 @@ int SDF_CloseSession(
 }
 
 #define SOFTSDF_DEV_DATE	"20240528"
-#define SOFTSDF_DEV_BATCH_NUM	"001"
-#define SOFTSDF_DEV_SERIAL_NUM	"0001"
+#define SOFTSDF_DEV_BATCH_NUM	"001" // as version.major
+#define SOFTSDF_DEV_SERIAL_NUM	"0100" // as version.minor
 #define SOFTSDF_DEV_SERIAL	SOFTSDF_DEV_DATE \
 				SOFTSDF_DEV_BATCH_NUM \
 				SOFTSDF_DEV_SERIAL_NUM
