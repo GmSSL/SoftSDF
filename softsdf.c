@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <gmssl/mem.h>
 #include <gmssl/sm2.h>
 #include <gmssl/sm3.h>
 #include <gmssl/sm4_cbc_mac.h>
@@ -449,6 +450,7 @@ int SDF_ReleasePrivateKeyAccessRight(
 	// delete container in container_list with uiKeyIndex
 	current_container = session->container_list;
 	prev_container = NULL;
+
 	while (current_container != NULL && current_container->key_index != uiKeyIndex) {
 		prev_container = current_container;
 		current_container = current_container->next;
@@ -1536,7 +1538,12 @@ int SDF_InternalSign_ECC(
 		return SDR_INARGERR;
 	}
 
-	if (pucData == NULL || uiDataLength != SM3_DIGEST_SIZE) {
+	if (pucData == NULL) {
+		error_print();
+		return SDR_INARGERR;
+	}
+
+	if (uiDataLength != SM3_DIGEST_SIZE) {
 		error_print();
 		return SDR_INARGERR;
 	}
@@ -1739,7 +1746,7 @@ int SDF_Encrypt(
 	void *hSessionHandle,
 	void *hKeyHandle,
 	unsigned int uiAlgID,
-	unsigned char *pucIV,
+	unsigned char *pucIV, // XXX: IV is updated after calling
 	unsigned char *pucData,
 	unsigned int uiDataLength,
 	unsigned char *pucEncData,
@@ -1748,7 +1755,6 @@ int SDF_Encrypt(
 	SOFTSDF_SESSION *session;
 	SOFTSDF_KEY *key;
 	SM4_KEY sm4_key;
-	size_t outlen;
 
 	if (deviceHandle == NULL) {
 		error_print();
@@ -1796,6 +1802,11 @@ int SDF_Encrypt(
 	}
 
 	if (pucData == NULL) {
+		error_print();
+		return SDR_INARGERR;
+	}
+
+	if (uiDataLength % 16) {
 		error_print();
 		return SDR_INARGERR;
 	}
@@ -1805,22 +1816,17 @@ int SDF_Encrypt(
 		return SDR_INARGERR;
 	}
 
-	// FIXME: calculate *puiEncDataLength if pucEncData is NULL
+	*puiEncDataLength = uiDataLength;
+
 	if (pucEncData == NULL) {
-		error_print();
-		return SDR_INARGERR;
+		return SDR_OK;
 	}
 
-
+	// TODO: cache `SM4_KEY` in `SOFTSDF_KEY`, reduce cost of calling `sm4_set_encrypt_key`
 	sm4_set_encrypt_key(&sm4_key, key->key);
-	if (sm4_cbc_padding_encrypt(&sm4_key, pucIV, pucData, uiDataLength, pucEncData, &outlen) != 1) {
-		error_print();
-		memset(&sm4_key, 0, sizeof(sm4_key));
-		return SDR_GMSSLERR;
-	}
-	memset(&sm4_key, 0, sizeof(sm4_key));
+	sm4_cbc_encrypt_blocks(&sm4_key, pucIV, pucData, uiDataLength/16, pucEncData);
+	gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
 
-	*puiEncDataLength = (unsigned int)outlen;
 	return SDR_OK;
 }
 
@@ -1828,7 +1834,7 @@ int SDF_Decrypt(
 	void *hSessionHandle,
 	void *hKeyHandle,
 	unsigned int uiAlgID,
-	unsigned char *pucIV,
+	unsigned char *pucIV, // XXX: IV is updated after calling
 	unsigned char *pucEncData,
 	unsigned int uiEncDataLength,
 	unsigned char *pucData,
@@ -1837,7 +1843,6 @@ int SDF_Decrypt(
 	SOFTSDF_SESSION *session;
 	SOFTSDF_KEY *key;
 	SM4_KEY sm4_key;
-	size_t outlen;
 
 	if (deviceHandle == NULL) {
 		error_print();
@@ -1889,26 +1894,27 @@ int SDF_Decrypt(
 		return SDR_INARGERR;
 	}
 
+	if (uiEncDataLength % 16) {
+		error_print();
+		return SDR_INARGERR;
+	}
+
 	if (puiDataLength == NULL) {
 		error_print();
 		return SDR_INARGERR;
 	}
 
-	// FIXME: calculate *puiDataLength if pucData is NULL
+	*puiDataLength = uiEncDataLength;
+
 	if (pucData == NULL) {
-		error_print();
-		return SDR_INARGERR;
+		return SDR_OK;
 	}
 
+	// TODO: cache `SM4_KEY` in `SOFTSDF_KEY`, reduce cost of calling `sm4_set_encrypt_key`
 	sm4_set_decrypt_key(&sm4_key, key->key);
-	if (sm4_cbc_padding_decrypt(&sm4_key, pucIV, pucEncData, uiEncDataLength, pucData, &outlen) != 1) {
-		error_print();
-		memset(&sm4_key, 0, sizeof(sm4_key));
-		return SDR_GMSSLERR;
-	}
-	memset(&sm4_key, 0, sizeof(sm4_key));
+	sm4_cbc_decrypt_blocks(&sm4_key, pucIV, pucEncData, uiEncDataLength/16, pucData);
+	gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
 
-	*puiDataLength = (unsigned int)outlen;
 	return SDR_OK;
 }
 
