@@ -14,6 +14,23 @@ set_target_properties(softsdf PROPERTIES OUTPUT_NAME "softsdf")
 
 target_link_libraries(softsdf /usr/local/lib/libgmssl.a)
 
+
+option(ENABLE_SM4_ECB "Enable SM4 ECB mode" ON)
+if (ENABLE_SM4_ECB)
+	add_definitions(-DENABLE_SM4_ECB)
+endif()
+
+option(ENABLE_SM4_OFB "Enable SM4 OFB mode" ON)
+if (ENABLE_SM4_OFB)
+	add_definitions(-DENABLE_SM4_OFB)
+endif()
+
+option(ENABLE_SM4_CFB "Enable SM4 CFB mode" ON)
+if (ENABLE_SM4_CFB)
+	add_definitions(-DENABLE_SM4_CFB)
+endif()
+
+
 if(APPLE)
     target_link_libraries(softsdf "-framework Security")
 endif()

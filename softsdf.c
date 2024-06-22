@@ -211,9 +211,9 @@ int SDF_CloseSession(
 	return SDR_OK;
 }
 
-#define SOFTSDF_DEV_DATE	"20240528"
+#define SOFTSDF_DEV_DATE	"20240622"
 #define SOFTSDF_DEV_BATCH_NUM	"001" // as version.major
-#define SOFTSDF_DEV_SERIAL_NUM	"0100" // as version.minor
+#define SOFTSDF_DEV_SERIAL_NUM	"0200" // as version.minor
 #define SOFTSDF_DEV_SERIAL	SOFTSDF_DEV_DATE \
 				SOFTSDF_DEV_BATCH_NUM \
 				SOFTSDF_DEV_SERIAL_NUM
@@ -259,6 +259,15 @@ int SDF_GetDeviceInfo(
 	pstDeviceInfo->AsymAlgAbility[0] = SGD_SM2_1|SGD_SM2_3;
 	pstDeviceInfo->AsymAlgAbility[1] = 256;
 	pstDeviceInfo->SymAlgAbility = SGD_SM4|SGD_CBC|SGD_MAC;
+#if ENABLE_SM4_ECB
+	pstDeviceInfo->SymAlgAbility |= SGD_ECB;
+#endif
+#if ENABLE_SM4_CFB
+	pstDeviceInfo->SymAlgAbility |= SGD_CFB;
+#endif
+#if ENABLE_SM4_OFB
+	pstDeviceInfo->SymAlgAbility |= SGD_OFB;
+#endif
 	pstDeviceInfo->HashAlgAbility = SGD_SM3;
 	pstDeviceInfo->BufferSize = 256*1024;
 
@@ -1087,6 +1096,7 @@ int SDF_ExchangeDigitEnvelopeBaseOnECC(
 	return SDR_NOTSUPPORT;
 }
 
+// XXX: `SDF_GenerateKeyWithKEK` use CBC-Padding, so the `pucKey` can not be decrypted by `SDF_Decrypt`
 int SDF_GenerateKeyWithKEK(
 	void *hSessionHandle,
 	unsigned int uiKeyBits,
@@ -1791,22 +1801,7 @@ int SDF_Encrypt(
 		return SDR_INARGERR;
 	}
 
-	if (uiAlgID != SGD_SM4_CBC) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	if (pucIV == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
 	if (pucData == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	if (uiDataLength % 16) {
 		error_print();
 		return SDR_INARGERR;
 	}
@@ -1816,6 +1811,47 @@ int SDF_Encrypt(
 		return SDR_INARGERR;
 	}
 
+	switch (uiAlgID) {
+	case SGD_SM4_CBC:
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		if (uiDataLength % 16) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#if ENABLE_SM4_ECB
+	case SGD_SM4_ECB:
+		if (uiDataLength % 16) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#endif
+#if ENABLE_SM4_CFB
+	case SGD_SM4_CFB:
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#endif
+#if ENABLE_SM4_OFB
+	case SGD_SM4_OFB:
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#endif
+	default:
+		error_print();
+		return SDR_INARGERR;
+	}
+
+	// XXX: change this when add CBC-Padding mode
 	*puiEncDataLength = uiDataLength;
 
 	if (pucEncData == NULL) {
@@ -1824,7 +1860,32 @@ int SDF_Encrypt(
 
 	// TODO: cache `SM4_KEY` in `SOFTSDF_KEY`, reduce cost of calling `sm4_set_encrypt_key`
 	sm4_set_encrypt_key(&sm4_key, key->key);
-	sm4_cbc_encrypt_blocks(&sm4_key, pucIV, pucData, uiDataLength/16, pucEncData);
+
+	switch (uiAlgID) {
+	case SGD_SM4_CBC:
+		sm4_cbc_encrypt_blocks(&sm4_key, pucIV, pucData, uiDataLength/16, pucEncData);
+		break;
+#if ENALBE_SM4_ECB
+	case SGD_SM4_ECB:
+		sm4_encrypt_blocks(&sm4_key, pucData, uiDataLength/16, pucEncData);
+		break;
+#endif
+#if ENALBE_SM4_CFB
+	case SGD_SM4_CFB:
+		sm4_cfb_encrypt(&sm4_key, SM4_CFB_128, pucIV, pucData, uiDataLength, pucEncData);
+		break;
+#endif
+#if ENALBE_SM4_OFB
+	case SGD_SM4_OFB:
+		sm4_ofb_encrypt(&sm4_key, pucIV, pucData, uiDataLength, pucEncData);
+		break;
+#endif
+	default:
+		gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
+		error_print();
+		return SDR_INARGERR;
+	}
+
 	gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
 
 	return SDR_OK;
@@ -1879,27 +1940,52 @@ int SDF_Decrypt(
 		return SDR_INARGERR;
 	}
 
-	if (uiAlgID != SGD_SM4_CBC) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	if (pucIV == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
 	if (pucEncData == NULL) {
 		error_print();
 		return SDR_INARGERR;
 	}
 
-	if (uiEncDataLength % 16) {
+	if (puiDataLength == NULL) {
 		error_print();
 		return SDR_INARGERR;
 	}
 
-	if (puiDataLength == NULL) {
+	switch (uiAlgID) {
+	case SGD_SM4_CBC:
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		if (uiEncDataLength % 16) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#if ENABLE_SM4_ECB
+	case SGD_SM4_ECB:
+		if (uiEncDataLength % 16) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#endif
+#if ENABLE_SM4_CFB
+	case SGD_SM4_CFB:
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#endif
+#if ENABLE_SM4_OFB
+	case SGD_SM4_OFB:
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
+		break;
+#endif
+	default:
 		error_print();
 		return SDR_INARGERR;
 	}
@@ -1911,8 +1997,36 @@ int SDF_Decrypt(
 	}
 
 	// TODO: cache `SM4_KEY` in `SOFTSDF_KEY`, reduce cost of calling `sm4_set_encrypt_key`
-	sm4_set_decrypt_key(&sm4_key, key->key);
-	sm4_cbc_decrypt_blocks(&sm4_key, pucIV, pucEncData, uiEncDataLength/16, pucData);
+
+	switch (uiAlgID) {
+	case SGD_SM4_CBC:
+		sm4_set_decrypt_key(&sm4_key, key->key);
+		sm4_cbc_decrypt_blocks(&sm4_key, pucIV, pucEncData, uiEncDataLength/16, pucData);
+		break;
+#if ENABLE_SM4_ECB
+	case SGD_SM4_ECB:
+		sm4_set_decrypt_key(&sm4_key, key->key);
+		sm4_encrypt_blocks(&sm4_key, pucEncData, uiEncDataLength/16, pucData);
+		break;
+#endif
+#if ENABLE_SM4_CFB
+	case SGD_SM4_CFB:
+		sm4_set_encrypt_key(&sm4_key, key->key);
+		sm4_cfb_decrypt(&sm4_key, SM4_CFB_128, pucIV, pucEncData, uiEncDataLength, pucData);
+		break;
+#endif
+#if ENABLE_SM4_OFB
+	case SGD_SM4_OFB:
+		sm4_set_encrypt_key(&sm4_key, key->key);
+		sm4_ofb_encrypt(&sm4_key, pucIV, pucEncData, uiEncDataLength, pucData);
+		break;
+#endif
+	default:
+		gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
+		error_print();
+		return SDR_INARGERR;
+	}
+
 	gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
 
 	return SDR_OK;

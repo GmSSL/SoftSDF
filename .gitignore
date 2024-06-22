@@ -17,4 +17,4 @@ softsdfinit
 *.key
 *.pem
 build*
-
+.DS_Store
