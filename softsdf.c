@@ -23,14 +23,17 @@
 
 #define SDR_GMSSLERR	(SDR_BASE + 0x00000100)
 
-static const uint8_t zeros[ECCref_MAX_LEN - 32] = {0};
-
-
 #define SOFTSDF_MAX_KEY_SIZE	64
-
+#define HASH_STATE_NONE  0
+#define HASH_STATE_INIT  1
+#define HASH_STATE_UPDATE 2
+#define HASH_STATE_FINAL 3
 struct SOFTSDF_KEY {
 	uint8_t key[SOFTSDF_MAX_KEY_SIZE];
 	size_t key_size;
+	SM4_KEY sm4_enc_key;
+	SM4_KEY sm4_dec_key;
+	int sm4_key_cached;
 	struct SOFTSDF_KEY *next;
 };
 
@@ -49,6 +52,7 @@ struct SOFTSDF_SESSION {
 	SOFTSDF_CONTAINER *container_list;
 	SOFTSDF_KEY *key_list;
 	SM3_CTX sm3_ctx;
+	int hash_state;
 	struct SOFTSDF_SESSION *next;
 };
 typedef struct SOFTSDF_SESSION SOFTSDF_SESSION;
@@ -497,15 +501,15 @@ int SDF_ExportEncPublicKey_RSA(
 	return SDR_NOTSUPPORT;
 }
 
-int SDF_GenerateKeyPair_RSA(
-	void *hSessionHandle,
-	unsigned int uiKeyBits,
-	RSArefPublicKey *pucPublicKey,
-	RSArefPrivateKey *pucPrivateKey)
-{
-	error_print();
-	return SDR_NOTSUPPORT;
-}
+// int SDF_GenerateKeyPair_RSA(
+// 	void *hSessionHandle,
+// 	unsigned int uiKeyBits,
+// 	RSArefPublicKey *pucPublicKey,
+// 	RSArefPrivateKey *pucPrivateKey)
+// {
+// 	error_print();
+// 	return SDR_NOTSUPPORT;
+// }
 
 int SDF_GenerateKeyWithIPK_RSA(
 	void *hSessionHandle,
@@ -542,18 +546,18 @@ int SDF_ImportKeyWithISK_RSA(
 	return SDR_NOTSUPPORT;
 }
 
-int SDF_ExchangeDigitEnvelopeBaseOnRSA(
-	void *hSessionHandle,
-	unsigned int uiKeyIndex,
-	RSArefPublicKey *pucPublicKey,
-	unsigned char *pucDEInput,
-	unsigned int uiDELength,
-	unsigned char *pucDEOutput,
-	unsigned int *puiDELength)
-{
-	error_print();
-	return SDR_NOTSUPPORT;
-}
+// int SDF_ExchangeDigitEnvelopeBaseOnRSA(
+// 	void *hSessionHandle,
+// 	unsigned int uiKeyIndex,
+// 	RSArefPublicKey *pucPublicKey,
+// 	unsigned char *pucDEInput,
+// 	unsigned int uiDELength,
+// 	unsigned char *pucDEOutput,
+// 	unsigned int *puiDELength)
+// {
+// 	error_print();
+// 	return SDR_NOTSUPPORT;
+// }
 
 int SDF_ExportSignPublicKey_ECC(
 	void *hSessionHandle,
@@ -671,72 +675,72 @@ int SDF_ExportEncPublicKey_ECC(
 	return SDR_OK;
 }
 
-int SDF_GenerateKeyPair_ECC(
-	void *hSessionHandle,
-	unsigned int uiAlgID,
-	unsigned int uiKeyBits,
-	ECCrefPublicKey *pucPublicKey,
-	ECCrefPrivateKey *pucPrivateKey)
-{
-	SOFTSDF_SESSION *session;
-	SM2_KEY sm2_key;
-	SM2_POINT public_key;
-	uint8_t private_key[32];
+// int SDF_GenerateKeyPair_ECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiAlgID,
+// 	unsigned int uiKeyBits,
+// 	ECCrefPublicKey *pucPublicKey,
+// 	ECCrefPrivateKey *pucPrivateKey)
+// {
+// 	SOFTSDF_SESSION *session;
+// 	SM2_KEY sm2_key;
+// 	SM2_POINT public_key;
+// 	uint8_t private_key[32];
 
-	if (deviceHandle == NULL) {
-		error_print();
-		return SDR_STEPERR;
-	}
+// 	if (deviceHandle == NULL) {
+// 		error_print();
+// 		return SDR_STEPERR;
+// 	}
 
-	if (hSessionHandle == NULL) {
-		error_puts("Invalid session handle");
-		return SDR_INARGERR;
-	}
-	session = deviceHandle->session_list;
-	while (session != NULL && session != hSessionHandle) {
-		session = session->next;
-	}
-	if (session == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
+// 	if (hSessionHandle == NULL) {
+// 		error_puts("Invalid session handle");
+// 		return SDR_INARGERR;
+// 	}
+// 	session = deviceHandle->session_list;
+// 	while (session != NULL && session != hSessionHandle) {
+// 		session = session->next;
+// 	}
+// 	if (session == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
 
-	if (uiAlgID != SGD_SM2_1 && uiAlgID != SGD_SM2_3) {
-		error_print();
-		return SDR_INARGERR;
-	}
+// 	if (uiAlgID != SGD_SM2_1 && uiAlgID != SGD_SM2_3) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
 
-	if (uiKeyBits != 256) {
-		error_print();
-		return SDR_INARGERR;
-	}
+// 	if (uiKeyBits != 256) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
 
-	if (pucPublicKey == NULL || pucPrivateKey == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
+// 	if (pucPublicKey == NULL || pucPrivateKey == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
 
-	if (sm2_key_generate(&sm2_key) != 1) {
-		error_print();
-		return SDR_GMSSLERR;
-	}
+// 	if (sm2_key_generate(&sm2_key) != 1) {
+// 		error_print();
+// 		return SDR_GMSSLERR;
+// 	}
 
-	sm2_z256_to_bytes(sm2_key.private_key, private_key);
-	sm2_z256_point_to_bytes(&sm2_key.public_key, (uint8_t *)&public_key);
+// 	sm2_z256_to_bytes(sm2_key.private_key, private_key);
+// 	sm2_z256_point_to_bytes(&sm2_key.public_key, (uint8_t *)&public_key);
 
-	memset(pucPublicKey, 0, sizeof(*pucPublicKey));
-	pucPublicKey->bits = 256;
-	memcpy(pucPublicKey->x + ECCref_MAX_LEN - 32, public_key.x, 32);
-	memcpy(pucPublicKey->y + ECCref_MAX_LEN - 32, public_key.y, 32);
+// 	memset(pucPublicKey, 0, sizeof(*pucPublicKey));
+// 	pucPublicKey->bits = 256;
+// 	memcpy(pucPublicKey->x + ECCref_MAX_LEN - 32, public_key.x, 32);
+// 	memcpy(pucPublicKey->y + ECCref_MAX_LEN - 32, public_key.y, 32);
 
-	memset(pucPrivateKey, 0, sizeof(*pucPrivateKey));
-	pucPrivateKey->bits = 256;
-	memcpy(pucPrivateKey->K + ECCref_MAX_LEN - 32, private_key, 32);
+// 	memset(pucPrivateKey, 0, sizeof(*pucPrivateKey));
+// 	pucPrivateKey->bits = 256;
+// 	memcpy(pucPrivateKey->K + ECCref_MAX_LEN - 32, private_key, 32);
 
-	memset(&sm2_key, 0, sizeof(sm2_key));
-	memset(private_key, 0, sizeof(private_key));
-	return SDR_OK;
-}
+// 	memset(&sm2_key, 0, sizeof(sm2_key));
+// 	memset(private_key, 0, sizeof(private_key));
+// 	return SDR_OK;
+// }
 
 int SDF_GenerateKeyWithIPK_ECC(
 	void *hSessionHandle,
@@ -811,6 +815,15 @@ int SDF_GenerateKeyWithIPK_ECC(
 		return SDR_GMSSLERR;
 	}
 	key->key_size = uiKeyBits/8;
+	if (key->key_size == SM4_KEY_SIZE) {
+		sm4_set_encrypt_key(&key->sm4_enc_key, key->key);
+		sm4_set_decrypt_key(&key->sm4_dec_key, key->key);
+		key->sm4_key_cached = 1;
+	} else {
+		key->sm4_key_cached = 0;
+		error_print();
+		return SDR_KEYERR;
+	}
 
 	// encrypt key with container
 	if (sm2_do_encrypt(&sm2_key, key->key, key->key_size, &ctxt) != 1) {
@@ -914,6 +927,15 @@ int SDF_GenerateKeyWithEPK_ECC(
 		return SDR_GMSSLERR;
 	}
 	key->key_size = uiKeyBits/8;
+	if (key->key_size == SM4_KEY_SIZE) {
+		sm4_set_encrypt_key(&key->sm4_enc_key, key->key);
+		sm4_set_decrypt_key(&key->sm4_dec_key, key->key);
+		key->sm4_key_cached = 1;
+	} else {
+		key->sm4_key_cached = 0;
+		error_print();
+		return SDR_KEYERR;
+	}
 
 	// encrypt key with external public key
 	if (sm2_do_encrypt(&sm2_key, key->key, key->key_size, &ctxt) != 1) {
@@ -1084,17 +1106,17 @@ int SDF_GenerateAgreementDataAndKeyWithECC(
 	return SDR_NOTSUPPORT;
 }
 
-int SDF_ExchangeDigitEnvelopeBaseOnECC(
-	void *hSessionHandle,
-	unsigned int uiKeyIndex,
-	unsigned int uiAlgID,
-	ECCrefPublicKey *pucPublicKey,
-	ECCCipher *pucEncDataIn,
-	ECCCipher *pucEncDataOut)
-{
-	error_print();
-	return SDR_NOTSUPPORT;
-}
+// int SDF_ExchangeDigitEnvelopeBaseOnECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiKeyIndex,
+// 	unsigned int uiAlgID,
+// 	ECCrefPublicKey *pucPublicKey,
+// 	ECCCipher *pucEncDataIn,
+// 	ECCCipher *pucEncDataOut)
+// {
+// 	error_print();
+// 	return SDR_NOTSUPPORT;
+// }
 
 // XXX: `SDF_GenerateKeyWithKEK` use CBC-Padding, so the `pucKey` can not be decrypted by `SDF_Decrypt`
 int SDF_GenerateKeyWithKEK(
@@ -1116,7 +1138,8 @@ int SDF_GenerateKeyWithKEK(
 	size_t enced_len;
 	SOFTSDF_KEY *key;
 
-	if (deviceHandle == NULL) {
+	if (deviceHandle == NULL)
+	{
 		error_print();
 		return SDR_STEPERR;
 	}
@@ -1143,7 +1166,6 @@ int SDF_GenerateKeyWithKEK(
 		error_print();
 		return SDR_INARGERR;
 	}
-
 	// load KEK file with index
 	snprintf(filename, FILENAME_MAX_LEN, "kek-%u.key", uiKEKIndex);
 	file = fopen(filename, "rb");
@@ -1152,7 +1174,6 @@ int SDF_GenerateKeyWithKEK(
 		error_print();
 		return SDR_KEYNOTEXIST;
 	}
-
 	size_t rlen;
 	if ((rlen = fread(kek, 1, sizeof(kek), file)) != sizeof(kek)) {
 
@@ -1174,7 +1195,6 @@ int SDF_GenerateKeyWithKEK(
 		error_print();
 		return SDR_INARGERR;
 	}
-
 	// generate key
 	key = (SOFTSDF_KEY *)malloc(sizeof(SOFTSDF_KEY));
 	if (key == NULL) {
@@ -1192,6 +1212,16 @@ int SDF_GenerateKeyWithKEK(
 	}
 
 	key->key_size = uiKeyBits/8;
+	if (key->key_size == SM4_KEY_SIZE) {
+		sm4_set_encrypt_key(&key->sm4_enc_key, key->key);
+		sm4_set_decrypt_key(&key->sm4_dec_key, key->key);
+		key->sm4_key_cached = 1;
+	} else {
+		key->sm4_key_cached = 0;
+		error_print();
+		return SDR_KEYERR;
+	}
+
 	if (rand_bytes(key->key, key->key_size) != 1) {
 		error_print();
 		free(key);
@@ -1390,10 +1420,9 @@ int SDF_ExternalPublicKeyOperation_RSA(
 	error_print();
 	return SDR_NOTSUPPORT;
 }
-
-int SDF_ExternalPrivateKeyOperation_RSA(
+int SDF_InternalPublicKeyOperation_RSA(
 	void *hSessionHandle,
-	RSArefPrivateKey *pucPrivateKey,
+	unsigned int uiKeyIndex,
 	unsigned char *pucDataInput,
 	unsigned int uiInputLength,
 	unsigned char *pucDataOutput,
@@ -1765,8 +1794,8 @@ int SDF_Encrypt(
 	SOFTSDF_SESSION *session;
 	SOFTSDF_KEY *key;
 	SM4_KEY sm4_key;
-
-	if (deviceHandle == NULL) {
+	if (deviceHandle == NULL)
+	{
 		error_print();
 		return SDR_STEPERR;
 	}
@@ -1788,6 +1817,7 @@ int SDF_Encrypt(
 		error_print();
 		return SDR_INARGERR;
 	}
+
 	key = session->key_list;
 	while (key != NULL && key != (SOFTSDF_KEY *)hKeyHandle) {
 		key = key->next;
@@ -1810,8 +1840,8 @@ int SDF_Encrypt(
 		error_print();
 		return SDR_INARGERR;
 	}
-
-	switch (uiAlgID) {
+	switch (uiAlgID)
+	{
 	case SGD_SM4_CBC:
 		if (pucIV == NULL) {
 			error_print();
@@ -1859,11 +1889,14 @@ int SDF_Encrypt(
 	}
 
 	// TODO: cache `SM4_KEY` in `SOFTSDF_KEY`, reduce cost of calling `sm4_set_encrypt_key`
-	sm4_set_encrypt_key(&sm4_key, key->key);
+	if (!key->sm4_key_cached){
+		sm4_set_encrypt_key(&sm4_key, key->key);
+		key->sm4_key_cached = 1;
+	}
 
 	switch (uiAlgID) {
 	case SGD_SM4_CBC:
-		sm4_cbc_encrypt_blocks(&sm4_key, pucIV, pucData, uiDataLength/16, pucEncData);
+			sm4_cbc_encrypt_blocks(&sm4_key, pucIV, pucData, uiDataLength/16, pucEncData);
 		break;
 #if ENALBE_SM4_ECB
 	case SGD_SM4_ECB:
@@ -1997,27 +2030,27 @@ int SDF_Decrypt(
 	}
 
 	// TODO: cache `SM4_KEY` in `SOFTSDF_KEY`, reduce cost of calling `sm4_set_encrypt_key`
-
+if(key->sm4_key_cached){
 	switch (uiAlgID) {
 	case SGD_SM4_CBC:
-		sm4_set_decrypt_key(&sm4_key, key->key);
+		// sm4_set_decrypt_key(&sm4_key, key->key);
 		sm4_cbc_decrypt_blocks(&sm4_key, pucIV, pucEncData, uiEncDataLength/16, pucData);
 		break;
 #if ENABLE_SM4_ECB
 	case SGD_SM4_ECB:
-		sm4_set_decrypt_key(&sm4_key, key->key);
+		// sm4_set_decrypt_key(&sm4_key, key->key);
 		sm4_encrypt_blocks(&sm4_key, pucEncData, uiEncDataLength/16, pucData);
 		break;
 #endif
 #if ENABLE_SM4_CFB
 	case SGD_SM4_CFB:
-		sm4_set_encrypt_key(&sm4_key, key->key);
+		// sm4_set_encrypt_key(&sm4_key, key->key);
 		sm4_cfb_decrypt(&sm4_key, SM4_CFB_128, pucIV, pucEncData, uiEncDataLength, pucData);
 		break;
 #endif
 #if ENABLE_SM4_OFB
 	case SGD_SM4_OFB:
-		sm4_set_encrypt_key(&sm4_key, key->key);
+		// sm4_set_encrypt_key(&sm4_key, key->key);
 		sm4_ofb_encrypt(&sm4_key, pucIV, pucEncData, uiEncDataLength, pucData);
 		break;
 #endif
@@ -2026,6 +2059,11 @@ int SDF_Decrypt(
 		error_print();
 		return SDR_INARGERR;
 	}
+}else{
+	error_print();
+	// not cached
+	return SDR_STEPERR;
+}
 
 	gmssl_secure_clear(&sm4_key, sizeof(sm4_key));
 
@@ -2137,7 +2175,235 @@ int SDF_CalculateMAC(
 
 	return SDR_OK;
 }
+int SDF_AuthEnc(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength,
+	unsigned char *pucAuthData,
+	unsigned int *puiAuthDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthDec(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned char *pucAuthData,
+	unsigned int *puiAuthDataLength,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_EncryptInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucIV,
+	unsigned int uiIVLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_EncryptUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_EncryptFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastEncData,
+	unsigned int *puiLastEncDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_DecryptInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucIV,
+	unsigned int uiIVLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_DecryptUpdate(
+	void *hSessionHandle,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_DecryptFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastData,
+	unsigned int *puiLastDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_CalculateMACInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucIV,
+	unsigned int uiIVLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_CalculateMACUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_CalculateMACFinal(
+	void *hSessionHandle,
+	unsigned char *pucMac,
+	unsigned int *puiMacLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthEncInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned int uiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthEncUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthEncFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastEncData,
+	unsigned int *puiLastEncDataLength,
+	unsigned char *pucAuthData,
+	unsigned int *puiAuthDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthDecInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned char *pucAuthData,
+	unsigned int uiAuthDataLength,
+	unsigned int uiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthDecUpdate(
+	void *hSessionHandle,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength
 
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_AuthDecFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastData,
+	unsigned int *puiLastDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_HMACInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_HMACUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength
+
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_HMACFinal(
+	void *hSessionHandle,
+	unsigned char *pucHMac,
+	unsigned int *puiHMacLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
 int SDF_HashInit(
 	void *hSessionHandle,
 	unsigned int uiAlgID,
@@ -2170,10 +2436,14 @@ int SDF_HashInit(
 		return SDR_INARGERR;
 	}
 
-	// FIXME: check step or return SDR_STEPERR;
+	if(session->hash_state != HASH_STATE_NONE && session->hash_state != HASH_STATE_FINAL)
+	{
+		return SDR_STEPERR;
+	}
 	sm3_init(&session->sm3_ctx);
-
-	if (pucPublicKey != NULL) {
+	session->hash_state = HASH_STATE_INIT;
+	if (pucPublicKey != NULL)
+	{
 
 		SM2_POINT point;
 		SM2_Z256_POINT public_key;
@@ -2231,8 +2501,12 @@ int SDF_HashUpdate(
 		error_print();
 		return SDR_INARGERR;
 	}
-
+	if (session->hash_state != HASH_STATE_INIT && session->hash_state != HASH_STATE_UPDATE) {
+		error_print();
+		return SDR_STEPERR;
+	}
 	sm3_update(&session->sm3_ctx, pucData, uiDataLength);
+	session->hash_state = HASH_STATE_UPDATE;
 
 	return SDR_OK;
 }
@@ -2265,8 +2539,12 @@ int SDF_HashFinal(void *hSessionHandle,
 		error_print();
 		return SDR_INARGERR;
 	}
-
+	if (session->hash_state != HASH_STATE_UPDATE) {
+		error_print();
+		return SDR_STEPERR;
+	}
 	sm3_finish(&session->sm3_ctx, pucHash);
+	session->hash_state = HASH_STATE_FINAL;
 
 	*puiHashLength = SM3_DIGEST_SIZE;
 	return SDR_OK;
@@ -2547,186 +2825,353 @@ int SDF_DeleteFile(
 
 	return SDR_OK;
 }
+// SDF_InternalEncrypt_ECC 和 SDF_InternalDecrypt_ECC 的功能在GM/T 0018-2023中
+// 被SDF_Encrypt和SDF_Decrypt取代
 
-int SDF_InternalEncrypt_ECC(
-	void *hSessionHandle,
-	unsigned int uiIPKIndex,
-	unsigned int uiAlgID,
-	unsigned char *pucData,
-	unsigned int uiDataLength,
-	ECCCipher *pucEncData)
+// int SDF_InternalEncrypt_ECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiIPKIndex,
+// 	unsigned int uiAlgID,
+// 	unsigned char *pucData,
+// 	unsigned int uiDataLength,
+// 	ECCCipher *pucEncData)
+// {
+// 	SOFTSDF_SESSION *session;
+// 	char filename[FILENAME_MAX_LEN];
+// 	FILE *file = NULL;
+// 	SM2_KEY sm2_key;
+// 	SM2_CIPHERTEXT ciphertext;
+
+// 	if (deviceHandle == NULL) {
+// 		error_print();
+// 		return SDR_STEPERR;
+// 	}
+
+// 	if (!hSessionHandle) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	session = deviceHandle->session_list;
+// 	while (session != NULL && session != hSessionHandle) {
+// 		session = session->next;
+// 	}
+// 	if (session == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+
+// 	// load public key by uiISKIndex
+// 	snprintf(filename, FILENAME_MAX_LEN, "sm2encpub-%u.pem", uiIPKIndex);
+// 	file = fopen(filename, "rb");
+// 	if (file == NULL) {
+// 		error_print();
+// 		return SDR_KEYNOTEXIST;
+// 	}
+// 	if (sm2_public_key_info_from_pem(&sm2_key, file) != 1) {
+// 		error_print();
+// 		fclose(file);
+// 		return SDR_KEYNOTEXIST;
+// 	}
+// 	fclose(file);
+
+// 	// check uiAlgID
+// 	if (uiAlgID != SGD_SM2_3) {
+// 		error_print();
+// 		return SDR_ALGNOTSUPPORT;
+// 	}
+
+// 	if (pucData == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	if (uiDataLength > SM2_MAX_PLAINTEXT_SIZE) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	if (pucEncData == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+
+// 	// encrypt
+// 	if (sm2_do_encrypt(&sm2_key, pucData, uiDataLength, &ciphertext) != 1) {
+// 		error_print();
+// 		return SDR_PKOPERR;
+// 	}
+// 	memset(pucEncData->x, 0, ECCref_MAX_LEN - 32);
+// 	memcpy(pucEncData->x + ECCref_MAX_LEN - 32, ciphertext.point.x, 32);
+// 	memset(pucEncData->y, 0, ECCref_MAX_LEN - 32);
+// 	memcpy(pucEncData->y + ECCref_MAX_LEN - 32, ciphertext.point.y, 32);
+// 	memcpy(pucEncData->M, ciphertext.hash, 32);
+// 	memcpy(pucEncData->C, ciphertext.ciphertext, ciphertext.ciphertext_size);
+// 	pucEncData->L = (unsigned int)ciphertext.ciphertext_size;
+
+// 	return SDR_OK;
+// }
+
+// int SDF_InternalDecrypt_ECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiISKIndex,
+// 	unsigned int uiAlgID,
+// 	ECCCipher *pucEncData,
+// 	unsigned char *pucData,
+// 	unsigned int *puiDataLength)
+// {
+// 	SOFTSDF_SESSION *session;
+// 	SOFTSDF_CONTAINER *container;
+// 	SM2_CIPHERTEXT ciphertext;
+// 	size_t plaintext_len;
+
+// 	if (deviceHandle == NULL) {
+// 		error_print();
+// 		return SDR_STEPERR;
+// 	}
+
+// 	if (!hSessionHandle) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	session = deviceHandle->session_list;
+// 	while (session != NULL && session != hSessionHandle) {
+// 		session = session->next;
+// 	}
+// 	if (session == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+
+// 	// load public key by uiISKIndex
+// 	container = session->container_list;
+// 	while (container != NULL && container->key_index != uiISKIndex) {
+// 		container = container->next;
+// 	}
+// 	if (container == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+
+// 	// check uiAlgID
+// 	if (uiAlgID != SGD_SM2_3) {
+// 		error_print();
+// 		return SDR_ALGNOTSUPPORT;
+// 	}
+
+// 	// check ciphertext
+// 	if (pucEncData == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	if (pucEncData->L > SM2_MAX_PLAINTEXT_SIZE) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+
+// 	// convert ECCCipher to SM2_CIPHERTEXT
+// 	if (memcmp(pucEncData->x, zeros, ECCref_MAX_LEN - 32) != 0) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	if (memcmp(pucEncData->y, zeros, ECCref_MAX_LEN - 32) != 0) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+// 	memcpy(ciphertext.point.x, pucEncData->x + ECCref_MAX_LEN - 32, 32);
+// 	memcpy(ciphertext.point.y, pucEncData->y + ECCref_MAX_LEN - 32, 32);
+// 	memcpy(ciphertext.hash, pucEncData->M, 32);
+// 	memcpy(ciphertext.ciphertext, pucEncData->C, pucEncData->L);
+// 	ciphertext.ciphertext_size = pucEncData->L;
+
+// 	if (puiDataLength == NULL) {
+// 		error_print();
+// 		return SDR_INARGERR;
+// 	}
+
+// 	if (pucData == NULL) {
+// 		*puiDataLength = pucEncData->L;
+// 		return SDR_OK;
+// 	}
+
+// 	if (sm2_do_decrypt(&container->enc_key, &ciphertext, pucData, &plaintext_len) != 1) {
+// 		error_print();
+// 		return SDR_PKOPERR;
+// 	}
+
+// 	*puiDataLength = (unsigned int)plaintext_len;
+// 	return SDR_OK;
+// }
+
+int SDF_GenerateKeyPair_RSA(
+	unsigned int uiKeyBits,
+	RSArefPublicKey *pucPublicKey,
+	RSArefPrivateKey *pucPrivateKey
+)
 {
-	SOFTSDF_SESSION *session;
-	char filename[FILENAME_MAX_LEN];
-	FILE *file = NULL;
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_GenerateKeyPair_ECC(
+	unsigned int uiAlgID,
+	unsigned int uiKeyBits,
+	ECCrefPublicKey *pucPublicKey,
+	ECCrefPrivateKey *pucPrivateKey)
+{
+
 	SM2_KEY sm2_key;
-	SM2_CIPHERTEXT ciphertext;
+	SM2_POINT public_key;
+	uint8_t private_key[32];
 
-	if (deviceHandle == NULL) {
-		error_print();
-		return SDR_STEPERR;
-	}
-
-	if (!hSessionHandle) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	session = deviceHandle->session_list;
-	while (session != NULL && session != hSessionHandle) {
-		session = session->next;
-	}
-	if (session == NULL) {
+	if (uiAlgID != SGD_SM2_1 && uiAlgID != SGD_SM2_3) {
 		error_print();
 		return SDR_INARGERR;
 	}
 
-	// load public key by uiISKIndex
-	snprintf(filename, FILENAME_MAX_LEN, "sm2encpub-%u.pem", uiIPKIndex);
-	file = fopen(filename, "rb");
-	if (file == NULL) {
-		error_print();
-		return SDR_KEYNOTEXIST;
-	}
-	if (sm2_public_key_info_from_pem(&sm2_key, file) != 1) {
-		error_print();
-		fclose(file);
-		return SDR_KEYNOTEXIST;
-	}
-	fclose(file);
-
-	// check uiAlgID
-	if (uiAlgID != SGD_SM2_3) {
-		error_print();
-		return SDR_ALGNOTSUPPORT;
-	}
-
-	if (pucData == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	if (uiDataLength > SM2_MAX_PLAINTEXT_SIZE) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	if (pucEncData == NULL) {
+	if (uiKeyBits != 256) {
 		error_print();
 		return SDR_INARGERR;
 	}
 
-	// encrypt
-	if (sm2_do_encrypt(&sm2_key, pucData, uiDataLength, &ciphertext) != 1) {
+	if (pucPublicKey == NULL || pucPrivateKey == NULL) {
 		error_print();
-		return SDR_PKOPERR;
+		return SDR_INARGERR;
 	}
-	memset(pucEncData->x, 0, ECCref_MAX_LEN - 32);
-	memcpy(pucEncData->x + ECCref_MAX_LEN - 32, ciphertext.point.x, 32);
-	memset(pucEncData->y, 0, ECCref_MAX_LEN - 32);
-	memcpy(pucEncData->y + ECCref_MAX_LEN - 32, ciphertext.point.y, 32);
-	memcpy(pucEncData->M, ciphertext.hash, 32);
-	memcpy(pucEncData->C, ciphertext.ciphertext, ciphertext.ciphertext_size);
-	pucEncData->L = (unsigned int)ciphertext.ciphertext_size;
 
+	if (sm2_key_generate(&sm2_key) != 1) {
+		error_print();
+		return SDR_GMSSLERR;
+	}
+
+	sm2_z256_to_bytes(sm2_key.private_key, private_key);
+	sm2_z256_point_to_bytes(&sm2_key.public_key, (uint8_t *)&public_key);
+
+	memset(pucPublicKey, 0, sizeof(*pucPublicKey));
+	pucPublicKey->bits = 256;
+	memcpy(pucPublicKey->x + ECCref_MAX_LEN - 32, public_key.x, 32);
+	memcpy(pucPublicKey->y + ECCref_MAX_LEN - 32, public_key.y, 32);
+
+	memset(pucPrivateKey, 0, sizeof(*pucPrivateKey));
+	pucPrivateKey->bits = 256;
+	memcpy(pucPrivateKey->K + ECCref_MAX_LEN - 32, private_key, 32);
+
+	memset(&sm2_key, 0, sizeof(sm2_key));
+	memset(private_key, 0, sizeof(private_key));
 	return SDR_OK;
 }
-
-int SDF_InternalDecrypt_ECC(
-	void *hSessionHandle,
-	unsigned int uiISKIndex,
-	unsigned int uiAlgID,
-	ECCCipher *pucEncData,
-	unsigned char *pucData,
-	unsigned int *puiDataLength)
-{
-	SOFTSDF_SESSION *session;
-	SOFTSDF_CONTAINER *container;
-	SM2_CIPHERTEXT ciphertext;
-	size_t plaintext_len;
-
-	if (deviceHandle == NULL) {
-		error_print();
-		return SDR_STEPERR;
-	}
-
-	if (!hSessionHandle) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	session = deviceHandle->session_list;
-	while (session != NULL && session != hSessionHandle) {
-		session = session->next;
-	}
-	if (session == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	// load public key by uiISKIndex
-	container = session->container_list;
-	while (container != NULL && container->key_index != uiISKIndex) {
-		container = container->next;
-	}
-	if (container == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	// check uiAlgID
-	if (uiAlgID != SGD_SM2_3) {
-		error_print();
-		return SDR_ALGNOTSUPPORT;
-	}
-
-	// check ciphertext
-	if (pucEncData == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	if (pucEncData->L > SM2_MAX_PLAINTEXT_SIZE) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	// convert ECCCipher to SM2_CIPHERTEXT
-	if (memcmp(pucEncData->x, zeros, ECCref_MAX_LEN - 32) != 0) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	if (memcmp(pucEncData->y, zeros, ECCref_MAX_LEN - 32) != 0) {
-		error_print();
-		return SDR_INARGERR;
-	}
-	memcpy(ciphertext.point.x, pucEncData->x + ECCref_MAX_LEN - 32, 32);
-	memcpy(ciphertext.point.y, pucEncData->y + ECCref_MAX_LEN - 32, 32);
-	memcpy(ciphertext.hash, pucEncData->M, 32);
-	memcpy(ciphertext.ciphertext, pucEncData->C, pucEncData->L);
-	ciphertext.ciphertext_size = pucEncData->L;
-
-	if (puiDataLength == NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
-	if (pucData == NULL) {
-		*puiDataLength = pucEncData->L;
-		return SDR_OK;
-	}
-
-	if (sm2_do_decrypt(&container->enc_key, &ciphertext, pucData, &plaintext_len) != 1) {
-		error_print();
-		return SDR_PKOPERR;
-	}
-
-	*puiDataLength = (unsigned int)plaintext_len;
-	return SDR_OK;
-}
-
-int SDF_InternalPublicKeyOperation_RSA(
-	void *hSessionHandle,
-	unsigned int uiKeyIndex,
-	unsigned char *pucDataInput,
+int SDF_ExternalPrivateKeyOperation_RSA(
+	RSArefPrivateKey *pucPrivateKey,
+	unsigned char *pucDatainput,
 	unsigned int uiInputLength,
 	unsigned char *pucDataOutput,
-	unsigned int *puiOutputLength)
+	unsigned int *puiOutputLength
+){
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalSign_ECC(
+	unsigned int uiAlgID,
+	ECCrefPrivateKey *pucPrivateKey,
+	unsigned char *pucDataInput,
+	unsigned int uiInputLength,
+	ECCSignature *pucSignature
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalDecrypt_ECC(
+	unsigned int uiAlgID,
+	ECCrefPrivateKey *pucPrivateKey,
+	ECCCipher *pucEncData,
+	unsigned char *pucData,
+	unsigned int *uiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalSign_SM9(
+	SM9SignMasterPublicKey *pSignMasterPublicKey,
+	SM9SignUserPrivateKey *pSignUserPrivateKey,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	SM9Signature *pSignature
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalDecrypt_SM9(
+	SM9EncUserPrivateKey *pEncUserPrivateKey,
+	unsigned char *pucUserID,
+	unsigned int uiUserIDLen,
+	unsigned char *pucIV,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	SM9Cipher *pEncData
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalKeyEncrypt(
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalKeyDecrypt(
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalKeyEncryptInit(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalKeyDecryptInit(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength
+)
+{
+	error_print();
+	return SDR_NOTSUPPORT;
+}
+int SDF_ExternalKeyHMACInit(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength
+)
 {
 	error_print();
 	return SDR_NOTSUPPORT;

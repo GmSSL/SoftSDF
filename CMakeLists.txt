@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(softsdf C)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wall -g")
 
 set(SOFTSDF_SRC softsdf.c)
 set(SOFTSDFINIT_SRC softsdfinit.c)

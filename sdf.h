@@ -103,6 +103,76 @@ typedef struct SDF_ENVELOPEDKEYBLOB {
 	ECCrefPublicKey PubKey;
 	unsigned char cbEncryptedPrivKey[64];
 } EnvelopedKeyBlob, *PEnvelopedKeyBlob;
+
+
+
+typedef struct SM9refMasterPrivateKey_st
+{
+    unsigned int bits;
+    unsigned char s[SM9ref_MAX_LEN];
+} SM9MasterPrivateKey;
+
+typedef struct SM9refSignMasterPublicKey_st{
+    unsigned int bits;
+    unsigned char xa[SM9ref_MAX_LEN];
+    unsigned char xb[SM9ref_MAX_LEN];
+    unsigned char ya[SM9ref_MAX_LEN];
+    unsigned char yb[SM9ref_MAX_LEN];
+} SM9SignMasterPublicKey;
+
+typedef struct SM9refEncMasterPublicKey_st{
+    unsigned int bits;
+    unsigned char x[SM9ref_MAX_LEN];
+    unsigned char y[SM9ref_MAX_LEN];
+} SM9EncMasterPublicKey;
+
+typedef struct  SM9refSignUserPrivateKey_st
+{
+    unsigned int bits;
+    unsigned char x[SM9ref_MAX_LEN];
+    unsigned char y[SM9ref_MAX_LEN];
+}SM9SignUserPrivateKey;
+
+typedef struct  SM9refEncUserPrivateKey_st
+{
+    unsigned int bits;
+    unsigned char xa[SM9ref_MAX_LEN];
+    unsigned char xb[SM9ref_MAX_LEN];
+    unsigned char ya[SM9ref_MAX_LEN];
+    unsigned char yb[SM9ref_MAX_LEN];
+}SM9EncUserPrivateKey;
+
+typedef struct SM9refCipher_st
+{
+    unsigned int EncType;
+    unsigned char x[SM9ref_MAX_LEN];
+    unsigned char y[SM9ref_MAX_LEN];
+    char h[32];
+    unsigned int L;
+    unsigned char C[];
+}SM9Cipher;
+typedef struct SM9refSignature_st{
+    unsigned char h[SM9ref_MAX_LEN];
+    unsigned char x[SM9ref_MAX_LEN];
+    unsigned char y[SM9ref_MAX_LEN];
+} SM9Signature;
+
+typedef struct SM9refKeyPackage_st{
+    unsigned char x[SM9ref_MAX_LEN];
+    unsigned char y[SM9ref_MAX_LEN];
+} SM9KeyPackage;
+typedef struct SM9refEncEnvelopedKey_st{
+    unsigned int version;
+    unsigned int ulSymmAlgID;
+    unsigned int bits;
+    unsigned char encryptedPriKey[SM9ref_MAX_LEN * 4];
+    SM9EncMasterPublicKey encMastPubKey;
+    SM9EncMasterPublicKey tempMastPubKey;
+    unsigned int userIDLen;
+    unsigned char userID[256];
+    unsigned int keyLen;
+    SM9KeyPackage keyPackage;
+} SM9EncEnveploedKey;
 #pragma pack()
 
 int SDF_OpenDevice(
@@ -147,12 +217,6 @@ int SDF_ExportEncPublicKey_RSA(
 	unsigned int uiKeyIndex,
 	RSArefPublicKey *pucPublicKey);
 
-int SDF_GenerateKeyPair_RSA(
-	void *hSessionHandle,
-	unsigned int uiKeyBits,
-	RSArefPublicKey *pucPublicKey,
-	RSArefPrivateKey *pucPrivateKey);
-
 int SDF_GenerateKeyWithIPK_RSA(
 	void *hSessionHandle,
 	unsigned int uiIPKIndex,
@@ -176,15 +240,6 @@ int SDF_ImportKeyWithISK_RSA(
 	unsigned int uiKeyLength,
 	void **phKeyHandle);
 
-int SDF_ExchangeDigitEnvelopeBaseOnRSA(
-	void *hSessionHandle,
-	unsigned int uiKeyIndex,
-	RSArefPublicKey *pucPublicKey,
-	unsigned char *pucDEInput,
-	unsigned int uiDELength,
-	unsigned char *pucDEOutput,
-	unsigned int *puiDELength);
-
 int SDF_ExportSignPublicKey_ECC(
 	void *hSessionHandle,
 	unsigned int uiKeyIndex,
@@ -194,13 +249,6 @@ int SDF_ExportEncPublicKey_ECC(
 	void *hSessionHandle,
 	unsigned int uiKeyIndex,
 	ECCrefPublicKey *pucPublicKey);
-
-int SDF_GenerateKeyPair_ECC(
-	void *hSessionHandle,
-	unsigned int uiAlgID,
-	unsigned int  uiKeyBits,
-	ECCrefPublicKey *pucPublicKey,
-	ECCrefPrivateKey *pucPrivateKey);
 
 int SDF_GenerateKeyWithIPK_ECC(
 	void *hSessionHandle,
@@ -256,13 +304,13 @@ int SDF_GenerateAgreementDataAndKeyWithECC(
 	ECCrefPublicKey *pucResponseTmpPublicKey,
 	void **phKeyHandle);
 
-int SDF_ExchangeDigitEnvelopeBaseOnECC(
-	void *hSessionHandle,
-	unsigned int uiKeyIndex,
-	unsigned int uiAlgID,
-	ECCrefPublicKey *pucPublicKey,
-	ECCCipher *pucEncDataIn,
-	ECCCipher *pucEncDataOut);
+// int SDF_ExchangeDigitEnvelopeBaseOnECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiKeyIndex,
+// 	unsigned int uiAlgID,
+// 	ECCrefPublicKey *pucPublicKey,
+// 	ECCCipher *pucEncDataIn,
+// 	ECCCipher *pucEncDataOut);
 
 int SDF_GenerateKeyWithKEK(
 	void *hSessionHandle,
@@ -339,21 +387,21 @@ int SDF_ExternalEncrypt_ECC(
 	unsigned int uiDataLength,
 	ECCCipher *pucEncData);
 
-int SDF_InternalEncrypt_ECC(
-	void *hSessionHandle,
-	unsigned int uiIPKIndex,
-	unsigned int uiAlgID,
-	unsigned char *pucData,
-	unsigned int uiDataLength,
-	ECCCipher *pucEncData);
+// int SDF_InternalEncrypt_ECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiIPKIndex,
+// 	unsigned int uiAlgID,
+// 	unsigned char *pucData,
+// 	unsigned int uiDataLength,
+// 	ECCCipher *pucEncData);
 
-int SDF_InternalDecrypt_ECC(
-	void *hSessionHandle,
-	unsigned int uiISKIndex,
-	unsigned int uiAlgID,
-	ECCCipher *pucEncData,
-	unsigned char *pucData,
-	unsigned int *uiDataLength);
+// int SDF_InternalDecrypt_ECC(
+// 	void *hSessionHandle,
+// 	unsigned int uiISKIndex,
+// 	unsigned int uiAlgID,
+// 	ECCCipher *pucEncData,
+// 	unsigned char *pucData,
+// 	unsigned int *uiDataLength);
 
 int SDF_Encrypt(
 	void *hSessionHandle,
@@ -384,6 +432,155 @@ int SDF_CalculateMAC(
 	unsigned int uiDataLength,
 	unsigned char *pucMAC,
 	unsigned int *puiMACLength);
+
+int SDF_AuthEnc(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength,
+	unsigned char *pucAuthData,
+	unsigned int *puiAuthDataLength);
+
+int SDF_AuthDec(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned char *pucAuthData,
+	unsigned int *puiAuthDataLength,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength);
+
+int SDF_EncryptInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucIV,
+	unsigned int uiIVLength);
+
+int SDF_EncryptUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength);
+
+int SDF_EncryptFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastEncData,
+	unsigned int *puiLastEncDataLength);
+
+int SDF_DecryptInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucIV,
+	unsigned int uiIVLength);
+
+int SDF_DecryptUpdate(
+	void *hSessionHandle,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength);
+
+int SDF_DecryptFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastData,
+	unsigned int *puiLastDataLength);
+
+int SDF_CalculateMACInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucIV,
+	unsigned int uiIVLength);
+
+int SDF_CalculateMACUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength);
+
+int SDF_CalculateMACFinal(
+	void *hSessionHandle,
+	unsigned char *pucMac,
+	unsigned int *puiMacLength);
+
+int SDF_AuthEncInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned int uiDataLength);
+
+int SDF_AuthEncUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength);
+
+int SDF_AuthEncFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastEncData,
+	unsigned int *puiLastEncDataLength,
+	unsigned char *pucAuthData,
+	unsigned int *puiAuthDataLength);
+
+int SDF_AuthDecInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucStartVar,
+	unsigned int uiStartVarLength,
+	unsigned char *pucAad,
+	unsigned int uiAadLength,
+	unsigned char *pucAuthData,
+	unsigned int uiAuthDataLength,
+	unsigned int uiDataLength);
+
+int SDF_AuthDecUpdate(
+	void *hSessionHandle,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength
+);
+
+int SDF_AuthDecFinal(
+	void *hSessionHandle,
+	unsigned char *pucLastData,
+	unsigned int *puiLastDataLength);
+
+int SDF_HMACInit(
+	void *hSessionHandle,
+	void *hKeyHandle,
+	unsigned int uiAlgID);
+
+int SDF_HMACUpdate(
+	void *hSessionHandle,
+	unsigned char *pucData,
+	unsigned int uiDataLength
+);
+
+int SDF_HMACFinal(
+	void *hSessionHandle,
+	unsigned char *pucHMac,
+	unsigned int *puiHMacLength);
 
 int SDF_HashInit(
 	void *hSessionHandle,
@@ -428,7 +625,78 @@ int SDF_DeleteFile(
 	unsigned char *pucFileName,
 	unsigned int uiNameLen);
 
-#define SDR_OK			0x0
+int SDF_GenerateKeyPair_RSA(
+	unsigned int uiKeyBits,
+	RSArefPublicKey *pucPublicKey,
+	RSArefPrivateKey *pucPrivateKey);
+
+int SDF_GenerateKeyPair_ECC(
+	unsigned int uiAlgID,
+	unsigned int  uiKeyBits,
+	ECCrefPublicKey *pucPublicKey,
+	ECCrefPrivateKey *pucPrivateKey);
+
+int SDF_ExternalSign_SM9(
+	SM9SignMasterPublicKey *pSignMasterPublicKey,
+	SM9SignUserPrivateKey *pSignUserPrivateKey,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	SM9Signature *pSignature);
+	
+int SDF_ExternalDecrypt_SM9(
+	SM9EncUserPrivateKey *pEncUserPrivateKey,
+	unsigned char *pucUserID,
+	unsigned int uiUserIDLen,
+	unsigned char *pucIV,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	SM9Cipher *pEncData);
+
+int SDF_ExternalKeyEncrypt(
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength,
+	unsigned char *pucData,
+	unsigned int uiDataLength,
+	unsigned char *pucEncData,
+	unsigned int *puiEncDataLength);
+
+int SDF_ExternalKeyDecrypt(
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength,
+	unsigned char *pucEncData,
+	unsigned int uiEncDataLength,
+	unsigned char *pucData,
+	unsigned int *puiDataLength);
+
+int SDF_ExternalKeyEncryptInit(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength);
+
+int SDF_ExternalKeyDecryptInit(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength,
+	unsigned char *pucIV,
+	unsigned int uiIVLength);
+
+int SDF_ExternalKeyHMACInit(
+	void *hSessionHandle,
+	unsigned int uiAlgID,
+	unsigned char *pucKey,
+	unsigned int uiKeyLength);
+
+#define SDR_OK 0x0
 #define SDR_BASE		0x01000000
 #define SDR_UNKNOWERR		(SDR_BASE + 0x00000001)
 #define SDR_NOTSUPPORT		(SDR_BASE + 0x00000002)

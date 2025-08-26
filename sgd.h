@@ -363,6 +363,8 @@ typedef HANDLE HCONTAINER;
 #endif
 #define ECCref_MAX_LEN			((ECCref_MAX_BITS+7) / 8)
 
+#define SM9ref_MAX_BITS 256
+#define SM9ref_MAX_LEN ((SM9ref_MAX_BITS + 7) / 8)
 
 /* SAF */
 #define SGD_MAX_COUNT		64
