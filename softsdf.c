@@ -1865,17 +1865,17 @@ int SDF_Encrypt(
 	case SGD_SM4_CBC:
 		sm4_cbc_encrypt_blocks(&sm4_key, pucIV, pucData, uiDataLength/16, pucEncData);
 		break;
-#if ENALBE_SM4_ECB
+#if ENABLE_SM4_ECB
 	case SGD_SM4_ECB:
 		sm4_encrypt_blocks(&sm4_key, pucData, uiDataLength/16, pucEncData);
 		break;
 #endif
-#if ENALBE_SM4_CFB
+#if ENABLE_SM4_CFB
 	case SGD_SM4_CFB:
 		sm4_cfb_encrypt(&sm4_key, SM4_CFB_128, pucIV, pucData, uiDataLength, pucEncData);
 		break;
 #endif
-#if ENALBE_SM4_OFB
+#if ENABLE_SM4_OFB
 	case SGD_SM4_OFB:
 		sm4_ofb_encrypt(&sm4_key, pucIV, pucData, uiDataLength, pucEncData);
 		break;
