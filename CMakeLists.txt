@@ -15,8 +15,6 @@ set(SOFTSDF_SRC softsdf.c)
 set(SOFTSDFINIT_SRC softsdfinit.c)
 
 set(GmSSL_ROOT_DIR "" CACHE PATH "Root directory of a GmSSL static installation")
-set(GmSSL_INCLUDE_DIR "" CACHE PATH "Directory containing GmSSL headers")
-set(GmSSL_LIBRARY "" CACHE FILEPATH "Path to the GmSSL static library")
 
 find_path(GmSSL_INCLUDE_DIR
 	NAMES gmssl/sm2.h
