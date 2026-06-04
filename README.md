@@ -96,15 +96,19 @@ $ softsdfinit -kek 1 -key 1 -pass P@ssw0rd
 
 ### 编译
 
-首先以静态库的方式编译、安装GmSSL。从 https://github.com/guanzhi/GmSSL 下载GmSSL的源代码。在源代码目录执行如下操作：
+首先以静态库的方式编译、安装 GmSSL。从 https://github.com/guanzhi/GmSSL 下载 GmSSL 的最新源代码。在源代码目录执行如下操作：
 
 ```sh
-mkdir build
-cd build
-cmake .. -DBUILD_SHARED_LIBS=OFF
-make
-make test
-sudo make install
+cmake -S . -B build \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  -DENABLE_SDF=ON \
+  -DENABLE_SM4_ECB=ON \
+  -DENABLE_SM4_CFB=ON \
+  -DENABLE_SM4_OFB=ON \
+  -DENABLE_SM4_CBC_MAC=ON
+cmake --build build
+cmake --install build
 ```
 
 由于SoftSDF依赖GmSSL的静态库，因此应检查静态库`/usr/local/lib/libgmssl.a`是否存在。默认情况下编译GmSSL只生成动态库，通过指定`-DBUILD_SHARED_LIBS=OFF`可以生成静态库。
@@ -112,11 +116,13 @@ sudo make install
 编译 SoftSDF 项目，生成 SDF 动态库和 `softsdfinit` 命令行工具：
 
 ```sh
-mkdir build
-cd build
-cmake ..
-make
+cmake -S . -B build -DGmSSL_ROOT_DIR=/usr/local
+cmake --build build
+ctest --test-dir build --output-on-failure
+cmake --install build
 ```
+
+当 CMake 能找到 GmSSL 的 `gmssl` 命令行工具时，测试会额外通过 GmSSL 的 SDF 命令加载 SoftSDF 动态库并执行联调。
 
 ### 安装
 
