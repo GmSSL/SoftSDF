@@ -2076,11 +2076,6 @@ int SDF_CalculateMAC(
 		return SDR_INARGERR;
 	}
 
-	if (pucIV != NULL) {
-		error_print();
-		return SDR_INARGERR;
-	}
-
 	if (pucData == NULL || uiDataLength <= 0) {
 		error_print();
 		return SDR_INARGERR;
@@ -2094,6 +2089,10 @@ int SDF_CalculateMAC(
 	if (uiAlgID == SGD_SM3) {
 		SM3_HMAC_CTX hmac_ctx;
 
+		if (pucIV != NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
 		if (key->key_size < 12) {
 			error_print();
 			return SDR_INARGERR;
@@ -2114,6 +2113,10 @@ int SDF_CalculateMAC(
 	} else if (uiAlgID == SGD_SM4_MAC) {
 		SM4_CBC_MAC_CTX cbc_mac_ctx;
 
+		if (pucIV == NULL) {
+			error_print();
+			return SDR_INARGERR;
+		}
 		if (key->key_size < SM4_KEY_SIZE) {
 			error_print();
 			return SDR_INARGERR;
@@ -2125,8 +2128,10 @@ int SDF_CalculateMAC(
 		}
 
 		sm4_cbc_mac_init(&cbc_mac_ctx, key->key);
+		memcpy(cbc_mac_ctx.iv, pucIV, SM4_BLOCK_SIZE);
 		sm4_cbc_mac_update(&cbc_mac_ctx, pucData, uiDataLength);
 		sm4_cbc_mac_finish(&cbc_mac_ctx, pucMAC);
+		memcpy(pucIV, cbc_mac_ctx.iv, SM4_BLOCK_SIZE);
 
 		memset(&cbc_mac_ctx, 0, sizeof(cbc_mac_ctx));
 
