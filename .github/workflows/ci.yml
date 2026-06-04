@@ -67,10 +67,18 @@ jobs:
 
       - name: Configure SoftSDF
         run: |
+          softsdf_gmssl_args=("-DGmSSL_ROOT_DIR=$RUNNER_TEMP/gmssl-install")
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            softsdf_gmssl_args=(
+              "-DGmSSL_INCLUDE_DIR=$RUNNER_TEMP/gmssl-src/include"
+              "-DGmSSL_LIBRARY=$RUNNER_TEMP/gmssl-build/bin/Release/gmssl.lib"
+              "-DGmSSL_GMSSL_EXECUTABLE=$RUNNER_TEMP/gmssl-build/bin/Release/gmssl.exe"
+            )
+          fi
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/${{ matrix.package }}" \
-            -DGmSSL_ROOT_DIR="$RUNNER_TEMP/gmssl-install"
+            "${softsdf_gmssl_args[@]}"
 
       - name: Build SoftSDF
         run: cmake --build build --config Release --parallel 4
