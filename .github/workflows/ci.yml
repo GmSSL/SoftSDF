@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Checkout latest GmSSL
-        run: git clone --depth 1 https://github.com/guanzhi/GmSSL.git "$RUNNER_TEMP/gmssl-src"
+        run: git clone --depth 1 --branch v3.2.0 https://github.com/guanzhi/GmSSL.git "$RUNNER_TEMP/gmssl-src"
 
       - name: Configure GmSSL static library
         run: |
